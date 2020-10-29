@@ -65,20 +65,107 @@ def filterString(str):
   str=str.upper()
   return ''.join(c for c in str if c in aislib.AISchars)
 
-def main(port,baud,targetPort,aisoptions):
-  ser = serial.Serial(port, baud, timeout=5.0,xonxoff=True)
-  if ser is None:
-    raise Exception("unable to open port %s"%(port))
-  cs = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  cs.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  addr="localhost"
-  destination=int(targetPort)
+class Reader:
+  def open(self):
+    raise Exception("not implemented")
+  def readline(self):
+    raise Exception("not implemented")
+class SerialReader(Reader):
+  def __init__(self,port,baud):
+    self.port=port
+    self.baud=baud;
+    self.ser=None
+
+  def open(self):
+    self.ser=serial.Serial(self.port, self.baud, timeout=5.0,xonxoff=True)
+
+  def readline(self):
+    if self.ser is None:
+      raise Exception("serial not open")
+    return self.ser.readline()
+
+class SocketReader(Reader):
+  def __init__(self,host,port):
+    self.host=host
+    self.port=port
+    self.socket=None
+    self.lines=[]
+    self.buffer=''
+
+  def open(self):
+    self.socket=socket.create_connection((self.host, int(self.port)),timeout=5)
+
+  def readline(self):
+    if self.socket is None:
+      raise Exception("socket not open")
+    if len(self.lines) > 0:
+      return self.lines.pop(0)
+    while True:
+      data = self.socket.recv(1024)
+      if len(data) == 0:
+        raise Exception("connection lost")
+      self.buffer = self.buffer + data.decode('ascii', 'ignore')
+      self.lines = self.buffer.splitlines(True)
+      if self.lines[-1][-1] == '\n':
+        self.buffer = ''
+        return self.lines.pop(0)
+      else:
+        self.buffer=self.lines[-1]
+        self.lines.pop()
+        if len(self.lines) > 0:
+          return self.lines.pop(0)
+
+
+def createReader(input):
+  ipopt = input.split(":")
+  if len(ipopt) != 3:
+    raise Exception("invalid input %s" % input)
+  if ipopt[0] == 'ser':
+    return SerialReader(ipopt[1],ipopt[2])
+  if ipopt[0] == 'tcp':
+    return SocketReader(ipopt[1],ipopt[2])
+  raise Exception("unknown input type")
+
+class Writer:
+  def send(self,data):
+    raise Exception("not implemented")
+  def open(self):
+    raise Exception("not implemented")
+class UdpWriter(Writer):
+  def __init__(self,host,port):
+    self.host=host
+    self.port=int(port)
+    self.socket=None
+
+  def open(self):
+    self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+  def send(self,data):
+    if self.socket is None:
+      raise Exception("socket not open")
+    self.socket.sendto(data, (self.host, self.port))
+
+def createOutput(output):
+  opopt = output.split(":")
+  if len(opopt) != 3:
+    raise Exception("invalid output %s" % output)
+  if opopt[0] != 'udp':
+    raise Exception("unknown output type %s"%output)
+  return UdpWriter(opopt[1],opopt[2])
+
+def main(input,output,aisoptions):
+
+  reader=createReader(input)
+  writer=createOutput(output)
+  reader.open()
+  writer.open()
   speed=0
   course=0
   altitude=0
   while True:
     try:
-      line = ser.readline()
+      line = reader.readline()
       if not line.startswith("$"):
         continue
       msg = pynmea2.parse(line)
@@ -107,7 +194,7 @@ def main(port,baud,targetPort,aisoptions):
         ais = aislib.AIS(aismsg)
         payload = ais.build_payload(False)
         print("!!%s"%payload)
-        cs.sendto(payload+"\n", (addr, destination))
+        writer.send(payload+"\n")
         aismsg=aislib.AISStaticAndVoyageReportMessage(
           mmsi=mmsi,
           callsign=filterString(aisoptions.get('callsign')),
@@ -118,7 +205,7 @@ def main(port,baud,targetPort,aisoptions):
         ais = aislib.AIS(aismsg)
         payload = ais.build_payload(False)
         print("!!%s" % payload)
-        cs.sendto(payload + "\n", (addr, destination))
+        writer.send(payload + "\n")
     except serial.SerialException as e:
       print('Device error: {}'.format(e))
       break
@@ -131,14 +218,16 @@ def main(port,baud,targetPort,aisoptions):
 
 
 if __name__ == '__main__':
-  if len(sys.argv) < 4:
-    print("usage: %s serialPort baud udpTargetPort [mmsi=...] [shipname=...]..."%sys.argv[0])
+  if len(sys.argv) < 3:
+    print("usage: %s input output [mmsi=...] [shipname=...]..."%sys.argv[0])
+    print("          input: ser:port:baud or tcp:host:port")
+    print("          output: udp:host:port")
     sys.exit(1)
   aisopts={}
-  for a in sys.argv[4:]:
+  for a in sys.argv[3:]:
     nv=a.split("=")
     if len(nv) != 2:
       print("invalid arg %s"%a)
       sys.exit(1)
     aisopts[nv[0]]=nv[1]
-  main(sys.argv[1],int(sys.argv[2]),sys.argv[3],aisopts)
+  main(sys.argv[1],sys.argv[2],aisopts)

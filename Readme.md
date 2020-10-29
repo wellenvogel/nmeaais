@@ -17,9 +17,13 @@ Eiher install them using pip or your package manager.
 
 Usage
 -----
-    nmea-ais.py /dev/ttyUSB0 9600 34667 mmsi=277799911 shiptype=sail
+    nmea-ais.py ser:/dev/ttyUSB0:9600 udp:localhost:34667 mmsi=277799911 shiptype=sail
+or
+    
+    nmea-ais.py tcp:localhost:34567 udp:localhost:34667 mmsi=277799911 shiptype=sail    
 
-With this call the program receices NMEA data from /dev/ttyUSB0 and sends out the AIS messages to localhost, port 34667.
+With the first call the program receices NMEA data from /dev/ttyUSB0 and sends out the AIS messages to localhost, port 34667.
+With the second call it receives data via tcp from localhost, port 34567.
 The AIS messages will be sent out whenever a valid NMEA position report is received.
 
 Supported AIS parameters
