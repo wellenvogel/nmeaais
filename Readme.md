@@ -9,7 +9,7 @@ Installation
 You need python 2.x. Clone this repo.
 Additionaly you need to install the following python packages:
 
-* bistring
+* bitstring
 * serial
 * nmea2
 
