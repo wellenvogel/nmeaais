@@ -72,7 +72,10 @@ class Reader:
     raise Exception("not implemented")
 class SerialReader(Reader):
   def __init__(self,port,baud):
-    self.port=port
+    try:	
+    	self.port=int(port)
+    except:
+        self.port=port
     self.baud=baud;
     self.ser=None
 
