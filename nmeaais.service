@@ -1,0 +1,18 @@
+#copy this file into /etc/systemd/system
+[Unit]
+Description=NMEA to AIS converter
+After=syslog.target network.target
+
+
+#adapt the following command to your needs - change the user and the parameters for the command
+[Service]
+User=pi
+StandardOutput=syslog
+StandardError=syslog
+ExecStart=/home/pi/nmeaais/nmea-ais.py -r ser:/dev/ttyUSB1:9600 udp:localhost:34667
+KillMode=control-group
+Restart=always
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
