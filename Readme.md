@@ -11,7 +11,7 @@ Additionaly you need to install the following python packages:
 
 * bitstring
 * serial
-* nmea2
+* pynmea2
 
 Eiher install them using pip or your package manager.
 
