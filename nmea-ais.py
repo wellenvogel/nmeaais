@@ -128,7 +128,7 @@ class SocketReader(Reader):
     self.buffer=''
 
   def open(self):
-    self.socket=socket.create_connection((self.host, int(self.port)),timeout=5)
+    self.socket=socket.create_connection((self.host, int(self.port)),timeout=20)
 
   def readline(self):
     if self.socket is None:
@@ -223,6 +223,7 @@ class NmeaToAis:
   def __init__(self,input,output):
     self.input=input
     self.output=output
+    self.bearingFromCourse=False
     self.positionInput=None
     self.positionThread=None
     self.aisoptions={}
@@ -239,6 +240,8 @@ class NmeaToAis:
   def readOwnPosition(self):
     print("own position reader started for %s"%self.positionInput)
     positionReader = None
+    minPrintDiff=5
+    lastPrinted=None
     while True:
       hasData=False
       try:
@@ -258,10 +261,14 @@ class NmeaToAis:
           if isinstance(msg, pynmea2.GGA):
             altitude = msg.altitude
             if altitude is not None:
+              diff=minPrintDiff+1
+              if lastPrinted is not None:
+                diff=abs(lastPrinted-altitude)
               self.altitude=altitude
               self.lastAltitude=time.time()
-              if not hasData:
+              if not hasData or diff > minPrintDiff:
                 print("OwnPosition altitude=%f" % (msg.altitude))
+                lastPrinted=altitude
                 hasData = True
               else:
                 debug("OwnPosition altitude=%f" % (msg.altitude))
@@ -308,7 +315,7 @@ class NmeaToAis:
     debug("!!%s" % payload)
     writer.send(payload + "\n")
 
-  def computeLandingPoint(self,currentPosition,lastPosition,currentAltitude,lastAltitude):
+  def computeLandingPoint(self,currentPosition,lastPosition,currentAltitude,lastAltitude,currentCourse):
     if currentAltitude > lastAltitude:
       debug("altitude increasing - cannot compute")
       return (None,None)
@@ -325,7 +332,7 @@ class NmeaToAis:
     if distance < self.minPosDiff:
       debug("position difference to small, cannot compute landing point")
       return (None,None)
-    bearing=geo.calcBearing(lastPosition,currentPosition)
+    bearing=geo.calcBearing(lastPosition,currentPosition) if not self.bearingFromCourse else currentCourse
     distanceToLanding=distance*(currentAltitude/(lastAltitude-currentAltitude))
     (landinglat,landinglon)=geo.targetPoint(currentPosition,bearing,distanceToLanding)
     return (landinglat,landinglon)
@@ -334,6 +341,7 @@ class NmeaToAis:
     longitudeAverage=Average(self.averageLen)
     latitudeAverage=Average(self.averageLen)
     altitudeAverage=Average(self.averageLen)
+    courseAverage=Average(self.averageLen)
     if self.positionInput:
       self.positionThread=threading.Thread(target=self.readOwnPosition)
       self.positionThread.setDaemon(True)
@@ -343,6 +351,7 @@ class NmeaToAis:
         longitudeAverage.reset()
         latitudeAverage.reset()
         altitudeAverage.reset()
+        courseAverage.reset()
         reader = createReader(self.input)
         writer = createOutput(self.output)
         reader.open()
@@ -368,6 +377,7 @@ class NmeaToAis:
             if isinstance(msg, pynmea2.RMC):
               speed = msg.spd_over_grnd
               course = msg.true_course
+              courseAverage.add(course)
             if isinstance(msg, pynmea2.GGA):
               altitude = msg.altitude
               altitudeAverage.add(altitude)
@@ -382,7 +392,7 @@ class NmeaToAis:
               latitudeAverage.add(msg.latitude)
               ownAltitudeValid=self.positionInput is None or (self.lastAltitude is not None and time.time() < (self.lastAltitude +self.ownPostionTimeout))
               if ownAltitudeValid and previousPosition is not None and previousAltitude is not None:
-                (latitude,longitude)=self.computeLandingPoint([msg.latitude,msg.longitude],previousPosition,altitude,previousAltitude)
+                (latitude,longitude)=self.computeLandingPoint([msg.latitude,msg.longitude],previousPosition,altitude,previousAltitude,courseAverage.cur())
                 if longitude is not None and latitude is not None:
                   if not isComputing:
                     print("Landing Point computation started")
@@ -437,9 +447,10 @@ if __name__ == '__main__':
   positionInput=None
   altitude=None
   average=1
+  bearingFromCourse=False
   if len(args) > 0:
     args.pop(0)
-  optlist,args=getopt.getopt(args,'drl:a:m:')
+  optlist,args=getopt.getopt(args,'drl:a:m:b')
   for flag,arg in optlist:
     if flag == '-d':
       doDebug=1
@@ -457,9 +468,12 @@ if __name__ == '__main__':
       average=int(arg)
       assert average >= 1, "average must be >= 1"
       continue
+    if flag == '-b':
+      bearingFromCourse=True
+      continue
     assert False,"unknown arg %s"%flag
   if len(args) < 2:
-    print("usage: %s [-d] [-r] [-l localInput] [-a altitude] [-m number] input output [mmsi=...] [shipname=...]...[mmsi2=...]..."%sys.argv[0])
+    print("usage: %s [-d] [-r] [-b] [-l localInput] [-a altitude] [-m number] input output [mmsi=...] [shipname=...]...[mmsi2=...]..."%sys.argv[0])
     print("          input: ser:port:baud or tcp:host:port")
     print("          output: udp:host:port")
     print("          -d: print debug messages")
@@ -467,6 +481,7 @@ if __name__ == '__main__':
     print("          -l input: provide the source for own position")
     print("          -a altitude: own altitude in m")
     print("          -m number: average over that many pos/alt for landing point (default: 1)")
+    print("          -b: use GPS course for bearing to landing (instead of pos diff)")
     sys.exit(1)
   for a in args[2:]:
     nv=a.split("=")
@@ -481,5 +496,6 @@ if __name__ == '__main__':
     runner.altitude=altitude
   if positionInput is not None:
     runner.positionInput=positionInput
+  runner.bearingFromCourse=bearingFromCourse
   runner.averageLen=average
   runner.run()
