@@ -290,11 +290,11 @@ class NmeaToAis:
     aismsg = aislib.AISPositionReportMessage(
       mmsi=mmsi,
       status=0,
-      sog=int(speed * 10),
+      sog=int((speed or 0) * 10),
       pa=1,
       lon=int(longitude * 600000.0),
       lat=int(latitude * 600000.0),
-      cog=int(course * 10),
+      cog=int((course or 0) * 10),
       ts=0,
       raim=1,
       comm_state=82419
@@ -377,7 +377,7 @@ class NmeaToAis:
             if isinstance(msg, pynmea2.RMC):
               speed = msg.spd_over_grnd
               course = msg.true_course
-              courseAverage.add(course)
+              courseAverage.add(course or 0)
             if isinstance(msg, pynmea2.GGA):
               altitude = msg.altitude
               altitudeAverage.add(altitude)
@@ -429,7 +429,7 @@ class NmeaToAis:
           except Exception as e:
             print('general error')
             print(traceback.format_exc())
-            continue
+            break
       except Exception as e:
         print("exception: %s" % e)
         if not tryForever:
