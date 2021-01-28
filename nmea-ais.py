@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: ts=2 sw=2 et ai
 ###############################################################################
@@ -117,7 +117,7 @@ class SerialReader(Reader):
   def readline(self):
     if self.ser is None:
       raise Exception("serial not open")
-    return self.ser.readline()
+    return self.ser.readline().decode('ascii',errors='ignore')
 
 class SocketReader(Reader):
   def __init__(self,host,port):
@@ -179,7 +179,7 @@ class UdpWriter(Writer):
   def send(self,data):
     if self.socket is None:
       raise Exception("socket not open")
-    self.socket.sendto(data, (self.host, self.port))
+    self.socket.sendto(data.encode('ascii',errors='ignore'), (self.host, self.port))
 
 def createOutput(output):
   opopt = output.split(":")

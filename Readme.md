@@ -10,7 +10,7 @@ You need python 2.x. Clone this repo.
 Additionaly you need to install the following python packages:
 
 * bitstring
-* serial
+* pyserial
 * pynmea2
 
 Eiher install them using pip or your package manager.

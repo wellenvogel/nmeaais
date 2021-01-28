@@ -62,7 +62,7 @@ class AISMessage(object):
     
     def __init__(self, elements):
         # Init our bit mapping and load up default message values
-        for key, arr in elements.iteritems():
+        for key, arr in elements.items():
             # arr[0] == data type of the element
             # arr[1] == number of bits for given element
             # arr[2] == the default value for the element
@@ -92,7 +92,7 @@ class AISMessage(object):
         We are overriding the __setattr__ to implement dynamic property "setters".
         """
         
-        if type(value) not in [ int,long]:
+        if type(value) not in [ int]:
             raise TypeError("Value must be an integer.")
             
         if name == "_bitmap":
@@ -244,8 +244,8 @@ class AISStaticAndVoyageReportMessage(AISMessage):
                     'mmsi'         : ["uint", 30, mmsi], 
                     'ais_version'  : ["uint", 2, ais_version], 
                     'imo'          : ["uint", 30, imo], 
-                    'callsign'     : ["uint", 42, AISString2Bits(callsign,length=42/6).int if type(callsign) == str else callsign], 
-                    'shipname'     : ["uint", 120, AISString2Bits(shipname,length=120/6).int if type(shipname) == str else shipname], 
+                    'callsign'     : ["uint", 42, AISString2Bits(callsign,length=42//6).int if type(callsign) == str else callsign],
+                    'shipname'     : ["uint", 120, AISString2Bits(shipname,length=120//6).int if type(shipname) == str else shipname],
                     'shiptype'     : ["uint", 8, shiptype], 
                     'to_bow'       : ["uint", 9, to_bow], 
                     'to_stern'     : ["uint", 9, to_stern], 
@@ -257,7 +257,7 @@ class AISStaticAndVoyageReportMessage(AISMessage):
                     'hour'         : ["uint", 5, hour], 
                     'minute'       : ["uint", 6, minute], 
                     'draught'      : ["uint", 8, draught], 
-                    'destination'  : ["uint", 120, AISString2Bits(destination,length=120/6).int if type(destination) == str else destination], 
+                    'destination'  : ["uint", 120, AISString2Bits(destination,length=120//6).int if type(destination) == str else destination],
                     'dte'          : ["uint", 1, dte], 
                     'spare'        : ["uint", 1, spare]
                 })
@@ -327,7 +327,7 @@ class AISStaticDataReportAMessage(AISMessage):
                     'repeat'          : ["uint", 2, repeat], 
                     'mmsi'            : ["uint", 30, mmsi], 
                     'partno'          : ["uint", 2, partno], 
-                    'shipname'        : ["uint", 120, AISString2Bits(shipname,length=120/6).int if type(shipname) == str else shipname], 
+                    'shipname'        : ["uint", 120, AISString2Bits(shipname,length=120//6).int if type(shipname) == str else shipname],
                     'spare'           : ["uint", 8, spare]
                 })
     
@@ -371,10 +371,10 @@ class AISStaticDataReportBMessage(AISMessage):
                     'mmsi'            : ["uint", 30, mmsi], 
                     'partno'          : ["uint", 2, partno], 
                     'shiptype'        : ["uint", 8, shiptype], 
-                    'vendorid'        : ["uint", 18, AISString2Bits(vendorid,length=18/6).int if type(vendorid) == str else vendorid], 
+                    'vendorid'        : ["uint", 18, AISString2Bits(vendorid,length=18//6).int if type(vendorid) == str else vendorid],
                     'model'           : ["uint", 4, model], 
                     'serial'          : ["uint", 20, serial], 
-                    'callsign'        : ["uint", 42, AISString2Bits(callsign,length=42/6).int if type(callsign) == str else callsign], 
+                    'callsign'        : ["uint", 42, AISString2Bits(callsign,length=42//6).int if type(callsign) == str else callsign],
                     'to_bow'          : ["uint", 9, to_bow], 
                     'to_stern'        : ["uint", 9, to_stern], 
                     'to_port'         : ["uint", 6, to_port], 
