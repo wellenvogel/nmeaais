@@ -236,6 +236,7 @@ class NmeaToAis:
     self.minAltDiff=10
     self.minPosDiff=50
     self.maxNonCompute=20
+    self.distanceFactor=1.0
 
   def readOwnPosition(self):
     print("own position reader started for %s"%self.positionInput)
@@ -275,7 +276,7 @@ class NmeaToAis:
           if isinstance(msg, pynmea2.LatLonFix):
             self.ownPosition=[msg.longitude,msg.latitude]
       except Exception as e:
-        print("Exception in reading own position: %s"%unicode(e))
+        print("Exception in reading own position: %s"%str(e))
       time.sleep(2)
 
   def getAisOption(self,name,second,default=None):
@@ -334,6 +335,7 @@ class NmeaToAis:
       return (None,None)
     bearing=geo.calcBearing(lastPosition,currentPosition) if not self.bearingFromCourse else currentCourse
     distanceToLanding=distance*(currentAltitude/(lastAltitude-currentAltitude))
+    distanceToLanding=distanceToLanding*self.distanceFactor
     (landinglat,landinglon)=geo.targetPoint(currentPosition,bearing,distanceToLanding)
     return (landinglat,landinglon)
 
@@ -448,9 +450,10 @@ if __name__ == '__main__':
   altitude=None
   average=1
   bearingFromCourse=False
+  factor=None
   if len(args) > 0:
     args.pop(0)
-  optlist,args=getopt.getopt(args,'drl:a:m:b')
+  optlist,args=getopt.getopt(args,'drl:a:m:bf:')
   for flag,arg in optlist:
     if flag == '-d':
       doDebug=1
@@ -471,9 +474,12 @@ if __name__ == '__main__':
     if flag == '-b':
       bearingFromCourse=True
       continue
+    if flag == '-f':
+      factor=float(arg)
+      continue
     assert False,"unknown arg %s"%flag
   if len(args) < 2:
-    print("usage: %s [-d] [-r] [-b] [-l localInput] [-a altitude] [-m number] input output [mmsi=...] [shipname=...]...[mmsi2=...]..."%sys.argv[0])
+    print("usage: %s [-d] [-r] [-b] [-l localInput] [-a altitude] [-m number] [-f factor] input output [mmsi=...] [shipname=...]...[mmsi2=...]..."%sys.argv[0])
     print("          input: ser:port:baud or tcp:host:port")
     print("          output: udp:host:port")
     print("          -d: print debug messages")
@@ -482,6 +488,7 @@ if __name__ == '__main__':
     print("          -a altitude: own altitude in m")
     print("          -m number: average over that many pos/alt for landing point (default: 1)")
     print("          -b: use GPS course for bearing to landing (instead of pos diff)")
+    print("          -f: factor for computed distance to landing point, default 1")
     sys.exit(1)
   for a in args[2:]:
     nv=a.split("=")
@@ -498,4 +505,7 @@ if __name__ == '__main__':
     runner.positionInput=positionInput
   runner.bearingFromCourse=bearingFromCourse
   runner.averageLen=average
+  if factor is not None:
+    print("using distance factor %f"%factor)
+    runner.distanceFactor=factor
   runner.run()
