@@ -99,71 +99,113 @@
     if (link){
       rt+=`
     <div class="predictRow">
-      <iframe class="predict" src="${link}"/>
+      <button onclick="click" class="predict" >Predict</button>
     </div>
     </div>`;
     }
     return rt;
   }
-  var userAisSonde={
-      name: "userAisSonde",
-      caption: "AIS(sonde)",
-      renderHtml: function(props){
-        if (! props.all instanceof Array) return "<div>no AIS targets</div>";
-        var current;
-        for (var i=0;i<props.all.length;i++){
-          if (props.all[i].mmsi == parseInt(props.mmsi)){
-            current=props.all[i];
-            break;
-          }
+   var userAisSonde={
+    name: "userAisSonde",
+    caption: "AIS(sonde)",
+    renderHtml: function(props){
+      if (! props.all instanceof Array) return "<div>no AIS targets</div>";
+      var current;
+      for (var i=0;i<props.all.length;i++){
+        if (props.all[i].mmsi == parseInt(props.mmsi)){
+          current=props.all[i];
+          break;
         }
-        if (! current) return `<div>mmsi ${props.mmsi} not found</div>`;
-        var launch_alt=undefined;
-        if (current.destination && current.destination.match(/ALT=/)){
-          var dv=parseFloat(current.destination.replace(/.*ALT= */,'').replace(/[^0-9.].*/,''));
-          if (! isNaN(dv)){
-            launch_alt=dv-props.altSub;
-          }  
-        }
-        var timeBack=props.secondsBack*1000;
-        var now=new Date();
-        var launch_time=new Date(now.getTime()-timeBack).toISOString();
-        var link=undefined;
-        if (launch_alt !== undefined){
-          if (launch_alt < 0) launch_alt=1000;
-          if (this.lastAlt !== undefined && this.lastTime){
-            var tdiff=now.getTime()-this.lastTime;
-            var altDiff=launch_alt-this.lastAlt;
-            var burstAlt=launch_alt-7;
-            if (tdiff > 0){
-              var downRate=altDiff*1000/tdiff;
-              if (downRate < 1) downRate=7;
-              link=`http://predict.cusf.co.uk/api/v1/?launch_latitude=${current.lat}&launch_longitude=${current.lon}&`+
-              `launch_altitude=132.1&launch_datetime=${launch_time}&ascent_rate=15&burst_altitude=${burstAlt.toFixed(1)}&descent_rate=${downRate}`;
-            }
-          }
-          this.lastTime=now.getTime();
-          this.lastAlt=launch_alt;
-        }
-        return getSondeHtml(current,current.course,link);
-      },
-      storeKeys:{
-        all:'nav.ais.list'
       }
+      if (! current) return `<div>mmsi ${props.mmsi} not found</div>`;
+      var launch_alt=undefined;
+      if (current.destination && current.destination.match(/ALT=/)){
+        var dv=parseFloat(current.destination.replace(/.*ALT= */,'').replace(/[^0-9.].*/,''));
+        if (! isNaN(dv)){
+          launch_alt=dv-props.altSub;
+        }  
+      }
+      var timeBack=props.secondsBack*1000;
+      var now=new Date();
+      var launch_time=new Date(now.getTime()-timeBack).toISOString();
+      var link=undefined;
+      if (launch_alt !== undefined){
+        if (launch_alt < 0) launch_alt=1000;
+        if (this.lastAlt !== undefined && this.lastTime){
+          var tdiff=now.getTime()-this.lastTime;
+          var altDiff=launch_alt-this.lastAlt;
+          var burstAlt=launch_alt-7;
+          if (tdiff > 0){
+            var downRate=altDiff*1000/tdiff;
+            if (downRate < 1) downRate=7;
+            link=`http://predict.cusf.co.uk/api/v1/?launch_latitude=${current.lat}&launch_longitude=${current.lon}&`+
+            `launch_altitude=132.1&launch_datetime=${launch_time}&ascent_rate=15&burst_altitude=${burstAlt.toFixed(1)}&descent_rate=${downRate}`;
+            this.link=link;
+          }
+        }
+        this.lastTime=now.getTime();
+        this.lastAlt=launch_alt;
+      }
+      return getSondeHtml(current,current.course,link);
+    },
+    initFunction: function(context){
+      var frameId='aisSondeFrame';
+      var displayFrame=document.getElementById(frameId);
+      if (! displayFrame){
+        displayFrame=document.createElement('iframe');
+        displayFrame.setAttribute('id',frameId);
+        var wrapper=document.createElement('div');
+        wrapper.setAttribute('id','aisSondeFrameWrapper');
+        wrapper.addEventListener('click',function(){
+          displayFrame.classList.remove('visible');
+        })
+        wrapper.appendChild(displayFrame);
+        document.body.appendChild(wrapper);
+      }
+      context.displayFrame=displayFrame;
+      //action for predict button click
+      context.eventHandler.click=function(){
+        if (context.displayFrame && context.link){
+          context.displayFrame.src=context.link;
+          context.displayFrame.classList.add('visible');
+        }
+      }
+    },
+    finalizeFunction:function(context){
+      if (context.displayFrame) context.displayFrame.classList.remove('visible');
+    },
+    storeKeys:{
+      all:'nav.ais.list'
+    }
   };
-  var aisSondeUserParam={
-    mmsi:{type:'NUMBER'},
-    secondsBack:{type:'NUMBER',default: 3600},
-    altSub:{type:'NUMBER',default: 40},
-    unit:false
-  };
-  
+    var aisSondeUserParam={
+      mmsi:{type:'NUMBER'},
+      secondsBack:{type:'NUMBER',default: 3600},
+      altSub:{type:'NUMBER',default: 40},
+      unit:false
+    };
+    
   
   /* some styles to put into user.css
-  .userAisSonde iframe.predict {
-  width: 100%;
-  height: 100%;
-  }
+  #aisSondeFrameWrapper{
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: lightgray;
+    padding-right: 4em;
+    padding-left: 4em;
+}    
+iframe#aisSondeFrame {
+        width: 40em;
+        max-width: 100vw;
+        height: 100vh;
+        display: none;
+        background: white;
+}
+iframe#aisSondeFrame.visible{
+    display: block;
+}     
+  
   */
  avnav.api.registerWidget(userAisSonde,aisSondeUserParam);
- 
