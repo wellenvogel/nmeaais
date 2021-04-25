@@ -110,7 +110,9 @@
         }
       }
       if (! current) return `<div>mmsi ${props.mmsi} not found</div>`;
-      var launch_alt=undefined;
+
+      //compute parameters for the predict query
+      var launch_alt=undefined; //the launch altitude
       if (current.destination && current.destination.match(/ALT=/)){
         var dv=parseFloat(current.destination.replace(/.*ALT= */,'').replace(/[^0-9.].*/,''));
         if (! isNaN(dv)){
@@ -119,22 +121,29 @@
       }
       var timeBack=props.secondsBack*1000;
       var now=new Date();
-      var launch_time=new Date(now.getTime()-timeBack).toISOString();
+      var launch_time=new Date(now.getTime()-timeBack).toISOString(); //the launch time
+      var longitude=current.lon;
+      var latitude=current.lat;
       var link=undefined;
       if (launch_alt !== undefined){
-        if (launch_alt < 0) launch_alt=1000;
+        if (launch_alt < 0) launch_alt=1000; //TODO: test
+        //we can only compute the link if we already have previous
+        //altitude and time values
+        //they are stored at this.lastAlt and this.lastTime
+        //if they are not set, the link is unset (and the button will not be shown)
         if (this.lastAlt !== undefined && this.lastTime){
           var tdiff=now.getTime()-this.lastTime;
           var altDiff=launch_alt-this.lastAlt;
           var burstAlt=launch_alt-7;
           if (tdiff > 0){
             var downRate=altDiff*1000/tdiff;
-            if (downRate < 1) downRate=7;
-            link=`http://predict.cusf.co.uk/api/v1/?launch_latitude=${current.lat}&launch_longitude=${current.lon}&`+
+            if (downRate < 1) downRate=7; //TODO: test
+            link=`http://predict.cusf.co.uk/api/v1/?launch_latitude=${latitude}&launch_longitude=${longitude}&`+
             `launch_altitude=132.1&launch_datetime=${launch_time}&ascent_rate=15&burst_altitude=${burstAlt.toFixed(1)}&descent_rate=${downRate}`;
-            this.link=link;
+            this.link=link; //store the link to be used later on in the button click
           }
         }
+        //store the current values for the next computation
         this.lastTime=now.getTime();
         this.lastAlt=launch_alt;
       }
@@ -142,28 +151,38 @@
     },
     initFunction: function(context){
       var frameId='aisSondeFrame';
+      //we check if we already have the necessary object (an iframe) to show
+      //the result. If not - create it now
+      //context is the variable (object) that we can access using "this" in the renderHtml
       var displayFrame=document.getElementById(frameId);
       if (! displayFrame){
+        //create the display elements as they are not there
         displayFrame=document.createElement('iframe');
         displayFrame.setAttribute('id',frameId);
         var wrapper=document.createElement('div');
         wrapper.setAttribute('id','aisSondeFrameWrapper');
         wrapper.addEventListener('click',function(){
+          //when we click on the grey frame around the display we hide it
           displayFrame.classList.remove('visible');
         })
         wrapper.appendChild(displayFrame);
+        //insert our display elemnt to the document
         document.body.appendChild(wrapper);
       }
+      //remember our display frame
       context.displayFrame=displayFrame;
       //action for predict button click
       context.eventHandler.click=function(){
         if (context.displayFrame && context.link){
+          //set the source of the display element to the last computed link
           context.displayFrame.src=context.link;
+          //show the display
           context.displayFrame.classList.add('visible');
         }
       }
     },
     finalizeFunction:function(context){
+      //if the widget goes away - just hide our display
       if (context.displayFrame) context.displayFrame.classList.remove('visible');
     },
     storeKeys:{
@@ -172,8 +191,8 @@
   };
     var aisSondeUserParam={
       mmsi:{type:'NUMBER'},
-      secondsBack:{type:'NUMBER',default: 3600},
-      altSub:{type:'NUMBER',default: 40},
+      secondsBack:{type:'NUMBER',default: 3600,description:'seconds back from now for launch time'}, 
+      altSub:{type:'NUMBER',default: 40,description:'meters we subtract from current altitude'},
       unit:false
     };
     
