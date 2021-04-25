@@ -15,19 +15,21 @@
 #aisSondeFrameWrapper{
     position: absolute;
     left: 0;
+    right: 0;
+    top: 0;
     bottom: 0;
     z-index: 9999;
-    background: lightgray;
-    padding-right: 4em;
-    padding-left: 4em;
+    background: #383232c7;
+    padding: 1em;
+    justify-content: center;
+    display: none;
 }    
-iframe#aisSondeFrame {
-        width: 40em;
-        max-width: 100vw;
-        height: 100vh;
-        display: none;
+#aisSondeFrame {
+        overflow: auto;
+        white-space: pre;
         background: white;
+        padding: 1em;
 }
-iframe#aisSondeFrame.visible{
-    display: block;
+#aisSondeFrameWrapper.visible{
+    display: flex;
 }     
