@@ -21,7 +21,7 @@
               </div>`;
     }
     var userAisNearest={
-        name: "userAisNearest",
+        name: "sondeAisNearest",
         caption :"AIS(nearest)",
         renderHtml: function(props){
             var current=props.current;
@@ -41,7 +41,7 @@
     *  in the layout editor you must input the mmsi
     */
     var userAisSelected={
-        name: "userAisSelected",
+        name: "sondeAisSelected",
         caption: "AIS(selected)",
         renderHtml: function(props){
           if (! props.all instanceof Array) return "<div>no AIS targets</div>";
@@ -65,14 +65,6 @@
     };
     
     
-    /* some styles to put into user.css
-    .userAisNearest .infoRow,.userAisSelected .infoRow {
-      text-align: left;
-    }
-    .userAisNearest .label,.userAisSelected .label{
-      width: 6em;
-    }
-    */
     avnav.api.registerWidget(userAisNearest,aisNearestUserParam);
     avnav.api.registerWidget(userAisSelected,aisSelectedUserParam);
 
@@ -106,8 +98,8 @@
     return rt;
   }
    var userAisSonde={
-    name: "userAisSonde",
-    caption: "AIS(sonde)",
+    name: "sondeAisPredict",
+    caption: "AIS(predict)",
     renderHtml: function(props){
       if (! props.all instanceof Array) return "<div>no AIS targets</div>";
       var current;
@@ -185,27 +177,4 @@
       unit:false
     };
     
-  
-  /* some styles to put into user.css
-  #aisSondeFrameWrapper{
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    z-index: 9999;
-    background: lightgray;
-    padding-right: 4em;
-    padding-left: 4em;
-}    
-iframe#aisSondeFrame {
-        width: 40em;
-        max-width: 100vw;
-        height: 100vh;
-        display: none;
-        background: white;
-}
-iframe#aisSondeFrame.visible{
-    display: block;
-}     
-  
-  */
  avnav.api.registerWidget(userAisSonde,aisSondeUserParam);
